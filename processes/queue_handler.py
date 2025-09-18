@@ -1,0 +1,98 @@
+"""Module to hande queue population"""
+
+import asyncio
+import logging
+
+from automation_server_client import Workqueue
+
+from mbu_dev_shared_components.database.connection import RPAConnection
+
+from helpers import config
+from helpers.get_and_store_alerts import get_alerts_past_week, update_db_with_alerts
+
+
+def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) -> list[dict]:
+    """
+    Retrieve items to be added to the workqueue.
+
+    Returns:
+        list[dict]: List of items, each item is a dictionary with at least 'reference' and 'data' keys.
+
+    Note: This is a placeholder function. Replace with actual implementation to fetch items.
+    """
+
+    with rpa_conn:
+        app_email = rpa_conn.get_constant("google_dlp_app_email").get("value", "")
+        admin_email = rpa_conn.get_constant("google_dlp_admin_email").get("value", "")
+
+    past_week_alerts = get_alerts_past_week(app_email=app_email, admin_email=admin_email)
+
+    references = [str(alert.get("alertId", "")) for alert in past_week_alerts]
+
+    items = [{"reference": ref, "data": d} for ref, d in zip(references, past_week_alerts)]
+
+    logger.info(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
+    print(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
+
+    update_db_with_alerts(past_week_alerts)
+
+    print(f"Database updated with {len(past_week_alerts)} alerts.")
+
+    return items
+
+
+async def concurrent_add(
+    workqueue: Workqueue, items: list[dict], logger: logging.Logger
+) -> None:
+    """
+    Populate the workqueue with items to be processed.
+    Uses concurrency and retries with exponential backoff.
+
+    Args:
+        workqueue (Workqueue): The workqueue to populate.
+        items (list[dict]): List of items to add to the queue.
+        logger (logging.Logger): Logger for logging messages.
+
+    Returns:
+        None
+
+    Raises:
+        Exception: If adding an item fails after all retries.
+    """
+    sem = asyncio.Semaphore(config.MAX_CONCURRENCY)
+
+    async def add_one(it: dict):
+        reference = str(it.get("reference") or "")
+        data = {"item": it}
+
+        async with sem:
+            for attempt in range(1, config.MAX_RETRIES + 1):
+                try:
+                    work_item = await asyncio.to_thread(
+                        workqueue.add_item, data, reference
+                    )
+                    logger.info(f"Added item to queue: {work_item}")
+                    return True
+                except Exception as e:
+                    if attempt >= config.MAX_RETRIES:
+                        logger.error(
+                            f"Failed to add item {reference} after {attempt} attempts: {e}"
+                        )
+                        return False
+                    backoff = config.RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                    logger.warning(
+                        f"Error adding {reference} (attempt {attempt}/{config.MAX_RETRIES}). "
+                        f"Retrying in {backoff:.2f}s... {e}"
+                    )
+                    await asyncio.sleep(backoff)
+
+    if not items:
+        logger.info("No new items to add.")
+        return
+
+    results = await asyncio.gather(*(add_one(i) for i in items))
+    successes = sum(1 for r in results if r)
+    failures = len(results) - successes
+    logger.info(
+        f"Summary: {successes} succeeded, {failures} failed out of {len(results)}"
+    )
