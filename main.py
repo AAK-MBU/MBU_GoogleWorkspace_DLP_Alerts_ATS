@@ -27,18 +27,18 @@ from processes.queue_handler import concurrent_add, retrieve_items_for_queue
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
 # ╚══════════════════════════════════════════════╝
-# This block disables SSL verification and overrides env vars
-import requests
-import urllib3
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-_old_request = requests.Session.request
-def unsafe_request(self, *args, **kwargs):
-    kwargs['verify'] = False
-    return _old_request(self, *args, **kwargs)
-requests.Session.request = unsafe_request
+# # This block disables SSL verification and overrides env vars
+# import requests
+# import urllib3
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# _old_request = requests.Session.request
+# def unsafe_request(self, *args, **kwargs):
+#     kwargs['verify'] = False
+#     return _old_request(self, *args, **kwargs)
+# requests.Session.request = unsafe_request
 
-# Manual override of essential env variables
-os.environ["GOOGLE_DLP_KEY"] = r"c:\tmp\rpa-digitalisering-0eb49ea935ff.p12"
+# # Manual override of essential env variables
+# os.environ["GOOGLE_DLP_KEY"] = r"c:\tmp\rpa-digitalisering-0eb49ea935ff.p12"
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
 # ╚══════════════════════════════════════════════╝

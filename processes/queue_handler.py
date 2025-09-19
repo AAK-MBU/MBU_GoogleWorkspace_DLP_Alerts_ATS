@@ -26,8 +26,6 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) ->
     items = []
 
     with rpa_conn:
-        print(RPAConnection)
-        exit()
         app_email = rpa_conn.get_constant("google_dlp_app_email").get("value", "")
         admin_email = rpa_conn.get_constant("google_dlp_admin_email").get("value", "")
 
@@ -44,8 +42,8 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) ->
         if "ruleViolationInfo" not in alert_data:
             continue
 
-        trigger_type = alert_data["ruleViolationInfo"]["ruleInfo"]["displayName"]
-        if trigger_type not in ("CPR-Number", "CPRNumber", "CPR_Number", "cpr_number", "CPR Number"):
+        trigger_type = str(alert_data["ruleViolationInfo"]["ruleInfo"]["displayName"])
+        if "cpr" not in trigger_type.lower():
             continue
 
         print(f"\n\nfull alert:\n\n{alert}\n\n")
