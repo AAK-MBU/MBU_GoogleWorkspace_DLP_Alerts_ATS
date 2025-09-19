@@ -40,7 +40,7 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection):
         subject = "Fil med CPR-nummer i Google Workspace skal flyttes"
         body_template = "\n<html>\n<body>\n<p>Kære {to_name},</p>\n<p>Du har uploadet en fil eller tastet et CPR-nummer i en fil i Google-miljøet. Det drejer sig om følgende fil: <a href=\"{link_to_file}\">Link til filen</a>.\nCPR-numre er i kategorien følsomme persondata, som ikke må ligge i Google-miljøet. Du skal derfor sørge for at få flyttet filen.</p>\n<p>Hvis filen indeholder CPR-nummer på en elev, skal den placeres i elevens Digitale mappe i GetOrganized.</p>\n<p>Hvis filen indeholder dit eller din families CPR-nummer, skal filen placeres i OneDrive i en mappe navngivet Privat eller lignende.</p>\n<p><a href=\"https://intranet.aarhuskommune.dk/documents/128713\">Hvis du vil vide mere kan du læse om dette her på AarhusIntra</a></p>\n</body>\n</html>"
 
-        alert_id = item_data["alertId"]
+        alert_id = item_reference
         print(f"alert id: {alert_id}")
 
         with pyodbc.connect(rpa_conn_string) as conn:
@@ -90,12 +90,15 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection):
                 # cursor.execute("EXEC [rpa].[DLPGoogleAlerts_Insert] @alertId = ?, @isNotified = ?", row.alertId, 1)
                 # conn.commit()
 
+            else:
+                raise ProcessError("No matching row found!")
+
     except pyodbc.Error as e:
         print(f"Database error: {str(e)}")
+
     except json.JSONDecodeError as e:
         print(f"JSON decode error: {str(e)}")
-    except KeyError as e:
-        print(f"Missing key in process arguments: {str(e)}")
+
     except ValueError as e:
         print(f"Value error: {str(e)}")
 

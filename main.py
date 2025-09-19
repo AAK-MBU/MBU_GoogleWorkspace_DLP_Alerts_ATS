@@ -5,7 +5,6 @@ This is the main entry point for the process
 import asyncio
 import logging
 import sys
-import os
 
 from dotenv import load_dotenv
 
@@ -148,11 +147,6 @@ if __name__ == "__main__":
 
     prod_workqueue = ats.workqueue()
     process = ats.process
-
-    if prod_workqueue.id != 8:
-        print(f"WARNING: Workqueue ID is {prod_workqueue.id}, expected 8!")
-
-        sys.exit(1)
 
     # Queue management
     if "--queue" in sys.argv:
