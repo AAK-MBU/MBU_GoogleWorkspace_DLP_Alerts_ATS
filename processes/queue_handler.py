@@ -21,22 +21,51 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) ->
     Note: This is a placeholder function. Replace with actual implementation to fetch items.
     """
 
+    references = []
+
+    items = []
+
     with rpa_conn:
+        print(RPAConnection)
+        exit()
         app_email = rpa_conn.get_constant("google_dlp_app_email").get("value", "")
         admin_email = rpa_conn.get_constant("google_dlp_admin_email").get("value", "")
 
     past_week_alerts = get_alerts_past_week(app_email=app_email, admin_email=admin_email)
 
-    references = [str(alert.get("alertId", "")) for alert in past_week_alerts]
-
-    items = [{"reference": ref, "data": d} for ref, d in zip(references, past_week_alerts)]
-
     logger.info(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
     print(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
 
     update_db_with_alerts(past_week_alerts)
-
     print(f"Database updated with {len(past_week_alerts)} alerts.")
+
+    for alert in past_week_alerts:
+        alert_data = alert.get("data")
+        if "ruleViolationInfo" not in alert_data:
+            continue
+
+        trigger_type = alert_data["ruleViolationInfo"]["ruleInfo"]["displayName"]
+        if trigger_type not in ("CPR-Number", "CPRNumber", "CPR_Number", "cpr_number", "CPR Number"):
+            continue
+
+        print(f"\n\nfull alert:\n\n{alert}\n\n")
+
+        alert_id = alert.get("alertId")
+
+        recipients = alert_data["ruleViolationInfo"]["recipients"]
+        doc_link = f"https://drive.google.com/file/d/{alert_data['ruleViolationInfo']['resourceInfo']['documentId']}/view"
+
+        references.append(alert_id)
+
+        items.append({
+            "data": {
+                "alert_id": alert_id,
+                "link_to_document": doc_link,
+                "recipients": recipients,
+                "trigger_type": trigger_type,
+            },
+            "reference": alert_id,
+        })
 
     return items
 

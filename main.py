@@ -7,6 +7,8 @@ import logging
 import sys
 import os
 
+from dotenv import load_dotenv
+
 from automation_server_client import AutomationServer, Workqueue
 
 from mbu_dev_shared_components.database.connection import RPAConnection
@@ -21,44 +23,31 @@ from processes.finalize_process import finalize_process
 from processes.process_item import process_item
 from processes.queue_handler import concurrent_add, retrieve_items_for_queue
 
-from dotenv import load_dotenv
 
-load_dotenv()  # Load environment variables from .env file
-
-
-### REMOVE IN PRODUCTION ###
+# ╔══════════════════════════════════════════════╗
+# ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
+# ╚══════════════════════════════════════════════╝
+# This block disables SSL verification and overrides env vars
 import requests
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 _old_request = requests.Session.request
-
-
 def unsafe_request(self, *args, **kwargs):
-    """
-    TESTING PURPOSES ONLY - DISABLES SSL VERIFICATION FOR ALL REQUESTS
-    """
     kwargs['verify'] = False
     return _old_request(self, *args, **kwargs)
-
-
 requests.Session.request = unsafe_request
-### REMOVE IN PRODUCTION ###
 
-
-# TEMPORARY OVERRIDE: Set a new env variable in memory only
-# os.environ["DbConnectionString"] = os.getenv("DBConnectionStringDev")
-# os.environ["DbConnectionString"] = os.getenv("DBConnectionStringProd")
-os.environ["DbConnectionString"] = os.getenv("DBConnectionStringServer58")
-
-if os.getenv("DbConnectionString") != "Driver={ODBC Driver 17 for SQL Server};Server=srvsql58;Database=rpa;Trusted_Connection=yes;":
-    print("WARNING: DbConnectionString environment variable not set to expected value!")
-
-    sys.exit()
-
-RPA_CONN = RPAConnection(db_env="PROD", commit=False)
-
+# Manual override of essential env variables
 os.environ["GOOGLE_DLP_KEY"] = r"c:\tmp\rpa-digitalisering-0eb49ea935ff.p12"
+# ╔══════════════════════════════════════════════╗
+# ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
+# ╚══════════════════════════════════════════════╝
+
+
+load_dotenv()  # Load environment variables from .env file
+
+RPA_CONN = RPAConnection(db_env="TEST", commit=False)
+# RPA_CONN = RPAConnection(db_env="PROD", commit=False)
 
 
 async def populate_queue(workqueue: Workqueue):
@@ -67,7 +56,7 @@ async def populate_queue(workqueue: Workqueue):
     logger = logging.getLogger(__name__)
     logger.info("Populating workqueue...")
 
-    items_to_queue = retrieve_items_for_queue(logger=logger, rpa_conn=RPA_CONN)  # Replace with actual source of items
+    items_to_queue = retrieve_items_for_queue(logger=logger, rpa_conn=RPA_CONN)
 
     queue_references = set(str(r) for r in ats_functions.get_workqueue_items(workqueue))
 
@@ -104,16 +93,16 @@ async def process_workqueue(workqueue: Workqueue):
 
                     try:
                         logger.info(f"Processing item with reference: {reference}")
-                        process_item(data, reference)
+                        process_item(item_data=data, item_reference=reference, rpa_conn=RPA_CONN)
 
                         completed_state = CompletedState.completed("Process completed without exceptions")  # Adjust message for specific purpose
                         item.complete(str(completed_state))
 
-                        continue
-
                     except BusinessError as e:
                         # A BusinessError indicates a breach of business logic or something else to be handled by business department
                         handle_error(error=e, log=logger.info, item=item, action=item.pending_user)
+
+                        sys.exit()
 
                     except Exception as e:
                         # Uncaught exceptions raised to ProcessErrors

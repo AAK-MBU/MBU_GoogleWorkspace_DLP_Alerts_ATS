@@ -3,11 +3,11 @@
 # ----------------------
 # Workqueue settings
 # ----------------------
-MAX_RETRY = 10
+MAX_RETRY = 1
 
 # ----------------------
 # Queue population settings
 # ----------------------
 MAX_CONCURRENCY = 10  # tune based on backend capacity
-MAX_RETRIES = 3  # failure retries per item
+MAX_RETRIES = 1  # failure retries per item
 RETRY_BASE_DELAY = 0.5  # seconds

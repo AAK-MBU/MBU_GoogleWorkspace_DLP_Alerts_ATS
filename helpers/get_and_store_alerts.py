@@ -17,7 +17,6 @@ Functions:
 
 
 import os
-import sys
 
 from typing import List, Dict, Any, Union
 from datetime import date, timedelta
