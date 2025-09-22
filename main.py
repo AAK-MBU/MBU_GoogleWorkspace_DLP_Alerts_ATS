@@ -48,6 +48,8 @@ load_dotenv()  # Load environment variables from .env file
 RPA_CONN = RPAConnection(db_env="TEST", commit=False)
 # RPA_CONN = RPAConnection(db_env="PROD", commit=False)
 
+sys.exit()
+
 
 async def populate_queue(workqueue: Workqueue):
     """Populate the workqueue with items to be processed."""
