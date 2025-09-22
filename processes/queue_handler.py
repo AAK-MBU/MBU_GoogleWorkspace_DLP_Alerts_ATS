@@ -46,7 +46,7 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) ->
         if "cpr" not in trigger_type.lower():
             continue
 
-        print(f"\n\nfull alert:\n\n{alert}\n\n")
+        # print(f"\n\nfull alert:\n\n{alert}\n\n")
 
         alert_id = alert.get("alertId")
 
