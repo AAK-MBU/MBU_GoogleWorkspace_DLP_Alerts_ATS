@@ -75,7 +75,7 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection, 
                     body = body_template.format(to_name=name, link_to_file=row.link)
 
                     smtp_util.send_email(
-                        receiver="dadj@aarhus.dk",
+                        receiver=email,
                         sender=email_sender,
                         subject=subject,
                         body=body,

@@ -43,11 +43,11 @@ from processes.queue_handler import concurrent_add, retrieve_items_for_queue
 
 load_dotenv()  # Load environment variables from .env file
 
-# RPA_CONN = RPAConnection(db_env="TEST", commit=False)
 RPA_CONN = RPAConnection(db_env="PROD", commit=False)
+# RPA_CONN = RPAConnection(db_env="TEST", commit=False)
 
-# DB_CONN_STRING = os.getenv("DBCONNECTIONSTRINGDEV")
 DB_CONN_STRING = os.getenv("DBCONNECTIONSTRINGPROD")
+# DB_CONN_STRING = os.getenv("DBCONNECTIONSTRINGDEV")
 
 
 async def populate_queue(workqueue: Workqueue):
