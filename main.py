@@ -21,25 +21,6 @@ from processes.finalize_process import finalize_process
 from processes.process_item import process_item
 from processes.queue_handler import concurrent_add, retrieve_items_for_queue
 
-# ╔══════════════════════════════════════════════╗
-# ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
-# ╚══════════════════════════════════════════════╝
-# # This block disables SSL verification and overrides env vars
-# import requests
-# import urllib3
-# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-# _old_request = requests.Session.request
-# def unsafe_request(self, *args, **kwargs):
-#     kwargs['verify'] = False
-#     return _old_request(self, *args, **kwargs)
-# requests.Session.request = unsafe_request
-
-# # Manual override of essential env variables
-# os.environ["GOOGLE_DLP_KEY"] = r"c:\tmp\rpa-digitalisering-0eb49ea935ff.p12"
-# ╔══════════════════════════════════════════════╗
-# ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
-# ╚══════════════════════════════════════════════╝
-
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -49,14 +30,15 @@ RPA_CONN = RPAConnection(db_env="PROD", commit=False)
 DB_CONN_STRING = os.getenv("DBCONNECTIONSTRINGPROD")
 # DB_CONN_STRING = os.getenv("DBCONNECTIONSTRINGDEV")
 
+logger = logging.getLogger(__name__)
+
 
 async def populate_queue(workqueue: Workqueue):
     """Populate the workqueue with items to be processed."""
 
-    logger = logging.getLogger(__name__)
     logger.info("Populating workqueue...")
 
-    items_to_queue = retrieve_items_for_queue(logger=logger, rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
+    items_to_queue = retrieve_items_for_queue(rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
 
     queue_references = set(str(r) for r in ats_functions.get_workqueue_items(workqueue))
 
@@ -71,16 +53,15 @@ async def populate_queue(workqueue: Workqueue):
         else:
             new_items.append(item)
 
-    print(f"Populating workqueue with {len(new_items)} alerts.")
+    logger.info(f"Populating workqueue with {len(new_items)} alerts.")
 
-    await concurrent_add(workqueue, new_items, logger)
+    await concurrent_add(workqueue, new_items)
     logger.info("Finished populating workqueue.")
 
 
 async def process_workqueue(workqueue: Workqueue):
     """Process items from the workqueue."""
 
-    logger = logging.getLogger(__name__)
     logger.info("Processing workqueue...")
 
     startup(logger=logger)
@@ -143,8 +124,6 @@ async def process_workqueue(workqueue: Workqueue):
 async def finalize(workqueue: Workqueue):
     """Finalize process."""
 
-    logger = logging.getLogger(__name__)
-
     logger.info("Finalizing process...")
 
     try:
@@ -166,6 +145,7 @@ async def finalize(workqueue: Workqueue):
 
 
 if __name__ == "__main__":
+    ats_functions.init_logger()
 
     ats = AutomationServer.from_environment()
 

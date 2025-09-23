@@ -10,8 +10,10 @@ from mbu_dev_shared_components.database.connection import RPAConnection
 from helpers import config
 from helpers.get_and_store_alerts import get_alerts_past_week, update_db_with_alerts
 
+logger = logging.getLogger(__name__)
 
-def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db_conn_string: str) -> list[dict]:
+
+def retrieve_items_for_queue(rpa_conn: RPAConnection, db_conn_string: str) -> list[dict]:
     """
     Retrieve items to be added to the workqueue.
 
@@ -32,10 +34,10 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db
     past_week_alerts = get_alerts_past_week(app_email=app_email, admin_email=admin_email)
 
     logger.info(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
-    print(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
 
     update_db_with_alerts(past_week_alerts, db_conn_string=db_conn_string)
-    print(f"Database updated with {len(past_week_alerts)} alerts.")
+
+    logger.info(f"Database updated with {len(past_week_alerts)} alerts.")
 
     for alert in past_week_alerts:
         alert_data = alert.get("data")
@@ -47,13 +49,6 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db
             continue
 
         alert_id = alert.get("alertId")
-        if alert_id not in (
-            "9bd74b7a-463c-4594-af98-80a941a670f8",
-            "EADBAFB9-64C5-4207-B9F0-4497847DDAD8",
-            "391D7DEA-F2C3-4045-880F-D04AD013D6D6",
-            "3C91EBEB-7262-4FBB-B70A-2B63CBEBF5C7",
-        ):
-            continue
 
         recipients = alert_data["ruleViolationInfo"]["recipients"]
         doc_link = f"https://drive.google.com/file/d/{alert_data['ruleViolationInfo']['resourceInfo']['documentId']}/view"
@@ -73,9 +68,7 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db
     return items
 
 
-async def concurrent_add(
-    workqueue: Workqueue, items: list[dict], logger: logging.Logger
-) -> None:
+async def concurrent_add(workqueue: Workqueue, items: list[dict]) -> None:
     """
     Populate the workqueue with items to be processed.
     Uses concurrency and retries with exponential backoff.
