@@ -89,50 +89,56 @@ async def process_workqueue(workqueue: Workqueue):
 
     while error_count < config.MAX_RETRY:
         for item in workqueue:
-            try:
-                with item:
-                    data, reference = ats_functions.get_item_info(item)  # Item data deserialized from json as dict
+            if item.reference != "9bd74b7a-463c-4594-af98-80a941a670f8":
+                continue
+            if "9bd74b7a-463c-4594-af98-80a941a670f8" not in item.reference:
+                continue
+            print(item)
+            sys.exit()
+            # try:
+            #     with item:
+            #         data, reference = ats_functions.get_item_info(item)  # Item data deserialized from json as dict
 
-                    try:
-                        logger.info(f"Processing item with reference: {reference}")
-                        process_item(item_data=data, item_reference=reference, rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
+            #         try:
+            #             logger.info(f"Processing item with reference: {reference}")
+            #             process_item(item_data=data, item_reference=reference, rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
 
-                        completed_state = CompletedState.completed("Process completed without exceptions")  # Adjust message for specific purpose
-                        item.complete(str(completed_state))
+            #             completed_state = CompletedState.completed("Process completed without exceptions")  # Adjust message for specific purpose
+            #             item.complete(str(completed_state))
 
-                        continue
+            #             continue
 
-                    except BusinessError as e:
-                        context = ErrorContext(
-                            item=item,
-                            action=item.pending_user,
-                            send_mail=False,
-                            process_name=workqueue.name,
-                        )
-                        handle_error(
-                            error=e,
-                            log=logger.info,
-                            context=context,
-                        )
+            #         except BusinessError as e:
+            #             context = ErrorContext(
+            #                 item=item,
+            #                 action=item.pending_user,
+            #                 send_mail=False,
+            #                 process_name=workqueue.name,
+            #             )
+            #             handle_error(
+            #                 error=e,
+            #                 log=logger.info,
+            #                 context=context,
+            #             )
 
-                    except Exception as e:
-                        pe = ProcessError(str(e))
-                        raise pe from e
+            #         except Exception as e:
+            #             pe = ProcessError(str(e))
+            #             raise pe from e
 
-            except ProcessError as e:
-                context = ErrorContext(
-                    item=item,
-                    action=item.fail,
-                    send_mail=True,
-                    process_name=workqueue.name,
-                )
-                handle_error(
-                    error=e,
-                    log=logger.error,
-                    context=context,
-                )
-                error_count += 1
-                reset(logger=logger)
+            # except ProcessError as e:
+            #     context = ErrorContext(
+            #         item=item,
+            #         action=item.fail,
+            #         send_mail=True,
+            #         process_name=workqueue.name,
+            #     )
+            #     handle_error(
+            #         error=e,
+            #         log=logger.error,
+            #         context=context,
+            #     )
+            #     error_count += 1
+            #     reset(logger=logger)
 
         break
 

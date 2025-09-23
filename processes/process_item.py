@@ -46,14 +46,16 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection, 
                 """
                 SELECT
                     [alertId],
+                    [triggerType],
                     [recipients],
                     [link],
+                    [data],
                     [isNotified],
                     [azident],
                     [navn],
                     [matched_recipient_emails]
                 FROM
-                    [RPA].[rpa].[DLPGoogleAlertsView_DADJ_TEST]
+                    [RPA].[rpa].[DLPGoogleAlertsView]
                 WHERE
                     isNotified = 0
                     AND triggerType = 'CPR-Number'
