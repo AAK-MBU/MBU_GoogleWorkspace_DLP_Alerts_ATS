@@ -47,7 +47,12 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db
             continue
 
         alert_id = alert.get("alertId")
-        if alert_id != "9bd74b7a-463c-4594-af98-80a941a670f8":
+        if alert_id not in (
+            "9bd74b7a-463c-4594-af98-80a941a670f8",
+            "EADBAFB9-64C5-4207-B9F0-4497847DDAD8",
+            "391D7DEA-F2C3-4045-880F-D04AD013D6D6",
+            "3C91EBEB-7262-4FBB-B70A-2B63CBEBF5C7",
+        ):
             continue
 
         recipients = alert_data["ruleViolationInfo"]["recipients"]
