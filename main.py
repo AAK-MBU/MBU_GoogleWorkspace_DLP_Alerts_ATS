@@ -44,16 +44,19 @@ async def populate_queue(workqueue: Workqueue):
 
     new_items: list[dict] = []
 
+    already_in_queue_sum = 0
+
     for item in items_to_queue:
         reference = str(item.get("reference") or "")
 
         if reference and reference in queue_references:
-            logger.info(f"Reference: {reference} already in queue. Item: {item} not added")
+            already_in_queue_sum += 1
 
         else:
             new_items.append(item)
 
-    logger.info(f"Populating workqueue with {len(new_items)} alerts.")
+    logger.info(f"{already_in_queue_sum} references already in workqueue")
+    logger.info(f"Populating workqueue with {len(new_items)} new alerts.")
 
     await concurrent_add(workqueue, new_items)
     logger.info("Finished populating workqueue.")
