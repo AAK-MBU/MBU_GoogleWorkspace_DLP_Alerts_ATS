@@ -60,7 +60,7 @@ def update_db_with_alerts(alerts: List[Dict[str, Any]]) -> Dict[str, Union[bool,
         oc_conn (OrchestratorConnection): An instance of OrchestratorConnection used to retrieve necessary constants.
     """
 
-    db_conn = os.getenv("DbConnectionString")
+    db_conn = os.getenv("DBCONNECTIONSTRINGDEV")
     print(f"DB Connection string: {db_conn}")
 
     sp_name = "rpa.DLPGoogleAlerts_Insert"
