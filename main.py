@@ -10,19 +10,16 @@ import os
 from dotenv import load_dotenv
 
 from automation_server_client import AutomationServer, Workqueue
-
-from mbu_dev_shared_components.database.connection import RPAConnection
-
 from mbu_rpa_core.exceptions import BusinessError, ProcessError
 from mbu_rpa_core.process_states import CompletedState
+from mbu_dev_shared_components.database.connection import RPAConnection
 
 from helpers import ats_functions, config
 from processes.application_handler import close, reset, startup
-from processes.error_handling import handle_error
+from processes.error_handling import ErrorContext, handle_error
 from processes.finalize_process import finalize_process
 from processes.process_item import process_item
 from processes.queue_handler import concurrent_add, retrieve_items_for_queue
-
 
 # ╔══════════════════════════════════════════════╗
 # ║ 🔥 REMOVE BEFORE DEPLOYMENT (TEMP OVERRIDES) 🔥 ║
@@ -103,22 +100,41 @@ async def process_workqueue(workqueue: Workqueue):
                         completed_state = CompletedState.completed("Process completed without exceptions")  # Adjust message for specific purpose
                         item.complete(str(completed_state))
 
-                    except BusinessError as e:
-                        # A BusinessError indicates a breach of business logic or something else to be handled by business department
-                        handle_error(error=e, log=logger.info, item=item, action=item.pending_user)
+                        continue
 
-                        sys.exit()
+                    except BusinessError as e:
+                        context = ErrorContext(
+                            item=item,
+                            action=item.pending_user,
+                            send_mail=False,
+                            process_name=workqueue.name,
+                        )
+                        handle_error(
+                            error=e,
+                            log=logger.info,
+                            context=context,
+                        )
 
                     except Exception as e:
-                        # Uncaught exceptions raised to ProcessErrors
                         pe = ProcessError(str(e))
                         raise pe from e
 
             except ProcessError as e:
-                # A ProcessError indicates a problem with the RPA process to be handled by the RPA team
-                handle_error(error=e, log=logger.error, action=item.fail, item=item, send_mail=True, process_name=workqueue.name)
+                context = ErrorContext(
+                    item=item,
+                    action=item.fail,
+                    send_mail=True,
+                    process_name=workqueue.name,
+                )
+                handle_error(
+                    error=e,
+                    log=logger.error,
+                    context=context,
+                )
                 error_count += 1
                 reset(logger=logger)
+
+        break
 
     logger.info("Finished processing workqueue.")
     close(logger=logger)
@@ -136,13 +152,15 @@ async def finalize(workqueue: Workqueue):
         logger.info("Finished finalizing process.")
 
     except BusinessError as e:
-        # A BusinessError indicates a breach of business logic or something else to be handled by business department
         handle_error(error=e, log=logger.info)
 
     except Exception as e:
         pe = ProcessError(str(e))
-        # A ProcessError indicates a problem with the RPA process to be handled by the RPA team
-        handle_error(error=pe, log=logger.error, send_mail=True, process_name=workqueue.name)
+        context = ErrorContext(
+            send_mail=True,
+            process_name=workqueue.name,
+        )
+        handle_error(error=pe, log=logger.error, context=context)
 
         raise pe from e
 

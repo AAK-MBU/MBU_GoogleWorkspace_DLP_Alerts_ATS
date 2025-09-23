@@ -3,6 +3,8 @@
 import base64
 import json
 import smtplib
+from collections.abc import Callable
+from dataclasses import dataclass
 from email.message import EmailMessage
 from io import BytesIO
 
@@ -12,40 +14,48 @@ from mbu_rpa_core.exceptions import BusinessError, ProcessError
 from PIL import ImageGrab
 
 
+@dataclass
+class ErrorContext:
+    """Context for error handling"""
+
+    item: WorkItem | None = None
+    action: Callable | None = None
+    send_mail: bool = False
+    add_screenshot: bool = True
+    process_name: str | None = None
+
+
 def handle_error(
     error: ProcessError | BusinessError,
     log,
-    item: WorkItem | None = None,
-    action=None,
-    send_mail=False,
-    add_screenshot=True,
-    process_name=None,
+    context: ErrorContext | None = None,
 ) -> None:
     """
     Function to log error.
     Args:
         error (ProcessError | BusinessError): The error to handle.
         log (function): Logging function to log messages.
-        item (WorkItem | None): The work item associated with the error, if any.
-        action (function | None): Action to perform with the error JSON, if any.
-        send_mail (bool): Whether to send an email notification about the error.
-        add_screenshot (bool): Whether to include a screenshot in the email.
-        process_name (str | None): Name of the process where the error occurred.
+        context (ErrorContext): Context object containing additional parameters.
     Returns:
         None
     Raises:
         BusinessError: If a business logic error occurs.
         ProcessError: If a processing error occurs.
     """
+    if context is None:
+        context = ErrorContext()
     error_json = json.dumps(error.__dictinfo__())
     log_msg = f"Error: {error}"
-    if item:
-        log_msg = f"{repr(error)} raised for item: {item}. " + log_msg
-        action(error_json)
+    if context.item:
+        log_msg = f"{repr(error)} raised for item: {context.item}. " + log_msg
+        if context.action:
+            context.action(error_json)
     log(log_msg)
-    if send_mail:
+    if context.send_mail:
         send_error_email(
-            error=error, add_screenshot=add_screenshot, process_name=process_name
+            error=error,
+            add_screenshot=context.add_screenshot,
+            process_name=context.process_name,
         )
 
 
@@ -73,6 +83,7 @@ def send_error_email(
         ]  # Find in database...
         smtp_server = rpa_conn.get_constant("smtp_server")["value"]
         smtp_port = rpa_conn.get_constant("smtp_port")["value"]
+
     # Create message
     msg = EmailMessage()
     msg["to"] = error_email
@@ -87,9 +98,9 @@ def send_error_email(
         html_message = f"""
                 <html>
                     <body>
-                        <p>Error type: {error_dict['type']}</p>
-                        <p>Error message: {error_dict['message']}</p>
-                        <p>{error_dict['traceback']}</p>
+                        <p>Error type: {error_dict["type"]}</p>
+                        <p>Error message: {error_dict["message"]}</p>
+                        <p>{error_dict["traceback"]}</p>
                         <img src="data:image/png;base64,{screenshot}" alt="Screenshot">
                     </body>
                 </html>
@@ -98,9 +109,9 @@ def send_error_email(
         html_message = f"""
                 <html>
                     <body>
-                        <p>Error type: {error_dict['type']}</p>
-                        <p>Error message: {error_dict['message']}</p>
-                        <p>{error_dict['traceback']}</p>
+                        <p>Error type: {error_dict["type"]}</p>
+                        <p>Error message: {error_dict["message"]}</p>
+                        <p>{error_dict["traceback"]}</p>
                     </body>
                 </html>
             """

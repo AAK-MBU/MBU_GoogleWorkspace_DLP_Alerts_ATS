@@ -49,8 +49,6 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db
         # print(f"\n\nfull alert:\n\n{alert}\n\n")
 
         alert_id = alert.get("alertId")
-        if alert_id != "597160b1-f5ff-4a42-a63b-a57c76d1e7d2":
-            continue
 
         recipients = alert_data["ruleViolationInfo"]["recipients"]
         doc_link = f"https://drive.google.com/file/d/{alert_data['ruleViolationInfo']['resourceInfo']['documentId']}/view"
