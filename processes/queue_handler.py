@@ -46,9 +46,9 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db
         if "cpr" not in trigger_type.lower():
             continue
 
-        # print(f"\n\nfull alert:\n\n{alert}\n\n")
-
         alert_id = alert.get("alertId")
+        if alert_id != "9bd74b7a-463c-4594-af98-80a941a670f8":
+            continue
 
         recipients = alert_data["ruleViolationInfo"]["recipients"]
         doc_link = f"https://drive.google.com/file/d/{alert_data['ruleViolationInfo']['resourceInfo']['documentId']}/view"
