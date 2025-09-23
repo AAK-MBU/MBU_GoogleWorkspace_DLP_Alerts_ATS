@@ -1,7 +1,6 @@
 """Module to handle item processing"""
-from mbu_rpa_core.exceptions import ProcessError, BusinessError
+from mbu_rpa_core.exceptions import ProcessError
 
-import sys
 import os
 import json
 import pyodbc
@@ -11,7 +10,7 @@ from mbu_dev_shared_components.database.connection import RPAConnection
 from helpers import smtp_util
 
 
-def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection):
+def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection, db_conn_string: str):
     """
     Function to handle item processing
 
@@ -30,8 +29,6 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection):
     print(item_data, item_reference)
 
     try:
-        rpa_conn_string = os.getenv("DbConnectionString")
-
         with rpa_conn:
             email_sender = rpa_conn.get_constant("e-mail_noreply").get("value", "")
             smtp_port = rpa_conn.get_constant("smtp_port").get("value", "")
@@ -43,7 +40,7 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection):
         alert_id = item_reference
         print(f"alert id: {alert_id}")
 
-        with pyodbc.connect(rpa_conn_string) as conn:
+        with pyodbc.connect(db_conn_string) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -86,9 +83,8 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection):
                         smtp_port=smtp_port
                     )
 
-                # # Only update isNotified once, outside the loop
-                # cursor.execute("EXEC [rpa].[DLPGoogleAlerts_Insert] @alertId = ?, @isNotified = ?", row.alertId, 1)
-                # conn.commit()
+                cursor.execute("EXEC [rpa].[DLPGoogleAlerts_Insert] @alertId = ?, @isNotified = ?", row.alertId, 1)
+                conn.commit()
 
             else:
                 raise ProcessError("No matching row found!")

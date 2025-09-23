@@ -11,7 +11,7 @@ from helpers import config
 from helpers.get_and_store_alerts import get_alerts_past_week, update_db_with_alerts
 
 
-def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) -> list[dict]:
+def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection, db_conn_string: str) -> list[dict]:
     """
     Retrieve items to be added to the workqueue.
 
@@ -34,7 +34,7 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) ->
     logger.info(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
     print(f"Retrieved {len(past_week_alerts)} alerts from Google Alert API.")
 
-    update_db_with_alerts(past_week_alerts)
+    update_db_with_alerts(past_week_alerts, db_conn_string=db_conn_string)
     print(f"Database updated with {len(past_week_alerts)} alerts.")
 
     for alert in past_week_alerts:
@@ -49,6 +49,8 @@ def retrieve_items_for_queue(logger: logging.Logger, rpa_conn: RPAConnection) ->
         # print(f"\n\nfull alert:\n\n{alert}\n\n")
 
         alert_id = alert.get("alertId")
+        if alert_id != "597160b1-f5ff-4a42-a63b-a57c76d1e7d2":
+            continue
 
         recipients = alert_data["ruleViolationInfo"]["recipients"]
         doc_link = f"https://drive.google.com/file/d/{alert_data['ruleViolationInfo']['resourceInfo']['documentId']}/view"

@@ -5,6 +5,7 @@ This is the main entry point for the process
 import asyncio
 import logging
 import sys
+import os
 
 from dotenv import load_dotenv
 
@@ -48,6 +49,9 @@ load_dotenv()  # Load environment variables from .env file
 RPA_CONN = RPAConnection(db_env="TEST", commit=False)
 # RPA_CONN = RPAConnection(db_env="PROD", commit=False)
 
+DB_CONN_STRING = os.getenv("DBCONNECTIONSTRINGDEV")
+# DB_CONN_STRING = os.getenv("DBCONNECTIONSTRINGPROD")
+
 
 async def populate_queue(workqueue: Workqueue):
     """Populate the workqueue with items to be processed."""
@@ -55,7 +59,7 @@ async def populate_queue(workqueue: Workqueue):
     logger = logging.getLogger(__name__)
     logger.info("Populating workqueue...")
 
-    items_to_queue = retrieve_items_for_queue(logger=logger, rpa_conn=RPA_CONN)
+    items_to_queue = retrieve_items_for_queue(logger=logger, rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
 
     queue_references = set(str(r) for r in ats_functions.get_workqueue_items(workqueue))
 
@@ -94,7 +98,7 @@ async def process_workqueue(workqueue: Workqueue):
 
                     try:
                         logger.info(f"Processing item with reference: {reference}")
-                        process_item(item_data=data, item_reference=reference, rpa_conn=RPA_CONN)
+                        process_item(item_data=data, item_reference=reference, rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
 
                         completed_state = CompletedState.completed("Process completed without exceptions")  # Adjust message for specific purpose
                         item.complete(str(completed_state))

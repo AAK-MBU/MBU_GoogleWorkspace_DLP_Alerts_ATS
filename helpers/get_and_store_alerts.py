@@ -51,7 +51,7 @@ def get_alerts_past_week(app_email: str, admin_email: str) -> List[Dict[str, Any
     return alerts
 
 
-def update_db_with_alerts(alerts: List[Dict[str, Any]]) -> Dict[str, Union[bool, str, Any]]:
+def update_db_with_alerts(alerts: List[Dict[str, Any]], db_conn_string: str) -> Dict[str, Union[bool, str, Any]]:
     """
     Updates the database with the provided alerts.
 
@@ -59,9 +59,6 @@ def update_db_with_alerts(alerts: List[Dict[str, Any]]) -> Dict[str, Union[bool,
         alerts (List[Dict[str, Any]]): A list of alert dictionaries to be inserted into the database.
         oc_conn (OrchestratorConnection): An instance of OrchestratorConnection used to retrieve necessary constants.
     """
-
-    db_conn = os.getenv("DBCONNECTIONSTRINGDEV")
-    print(f"DB Connection string: {db_conn}")
 
     sp_name = "rpa.DLPGoogleAlerts_Insert"
 
@@ -76,6 +73,6 @@ def update_db_with_alerts(alerts: List[Dict[str, Any]]) -> Dict[str, Union[bool,
             "source": ("str", alert.get("source")),
             "data": ("json", alert.get("data"))
         }
-        update_db_result = execute_stored_procedure(db_conn, sp_name, alert_data_params)
+        update_db_result = execute_stored_procedure(db_conn_string, sp_name, alert_data_params)
 
     return update_db_result
