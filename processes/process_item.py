@@ -87,8 +87,10 @@ def process_item(item_data: dict, item_reference: str, rpa_conn: RPAConnection, 
                 cursor.execute("EXEC [rpa].[DLPGoogleAlerts_Insert] @alertId = ?, @isNotified = ?", row.alertId, 1)
                 conn.commit()
 
+                return "Process completed without exceptions"
+
             else:
-                raise ProcessError("No matching row found!")
+                return "Process completed - No matching row found!"
 
     except pyodbc.Error as e:
         print(f"Database error: {str(e)}")

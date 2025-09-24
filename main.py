@@ -79,9 +79,9 @@ async def process_workqueue(workqueue: Workqueue):
 
                     try:
                         logger.info(f"Processing item with reference: {reference}")
-                        process_item(item_data=data, item_reference=reference, rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
+                        completed_message = process_item(item_data=data, item_reference=reference, rpa_conn=RPA_CONN, db_conn_string=DB_CONN_STRING)
 
-                        completed_state = CompletedState.completed("Process completed without exceptions")  # Adjust message for specific purpose
+                        completed_state = CompletedState.completed(completed_message)  # Adjust message for specific purpose
                         item.complete(str(completed_state))
 
                         continue
